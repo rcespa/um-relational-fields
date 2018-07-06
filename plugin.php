@@ -8,6 +8,12 @@
  * Author URI:  https://plusplugins.com
  */
 
+
+/*
+The code below has been modified to let the plugin work with Ultimate Member 2.0
+Use at your own risk
+*/
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -23,12 +29,15 @@ class PP_Fields {
 
 		add_action( 'init', array( $this, 'plugin_check' ), 10 );
 		add_action( 'admin_notices', array( $this, 'add_notice' ), 20 );
-		add_filter( 'redux/options/um_options/sections', array( $this, 'add_field_relationships_tab' ), 9005 );
+		add_filter( 'um_settings_structure', array( $this, 'add_field_relationships_tab' ), 9005 );
+		add_filter( 'um_generate_tabs_menu_{$page}', 'my_tabs_menu', 10, 1 );
 		add_action( 'init', array( $this, 'init' ), 100 );
+		add_action( 'um_settings_page_um_options_pages_before_section', 'my_settings_page_before_section', 10 );
 	}
 
+
 	function plugin_check() {
-		if ( ! class_exists( 'UM_API' ) ) {
+		if ( ! class_exists( 'UM' ) ) {
 			$this->notice_messge   = __( 'The <strong>UM Relational Fields</strong> extension requires the Ultimate Member plugin to be activated to work properly. You can download it <a href="https://wordpress.org/plugins/ultimate-member">here</a>', 'pp-contact' );
 			$this->plugin_inactive = true;
 		} else if ( ! version_compare( ultimatemember_version, PP_FIELDS_REQUIRES, '>=' ) ) {
@@ -45,7 +54,9 @@ class PP_Fields {
 		echo '<div class="error"><p>' . $this->notice_messge . '</p></div>';
 	}
 
-	function add_field_relationships_tab( $sections ) {
+	function add_field_relationships_tab( $settings ) {
+
+
 		ob_start();
 		?>
 
@@ -77,8 +88,6 @@ class PP_Fields {
 		<p><code>recommended_content|post|post,page|true</code></p>
 		<p><code>friends|user||false</code></p>
 		<p><code>category|tax|category|true</code></p>
-		<h4>Questions?</h4>
-		<p>Shoot us an email: <strong>info@plusplugins.com</strong></p>
 
 		<?php
 		$desc = ob_get_contents();
@@ -86,25 +95,38 @@ class PP_Fields {
 
 		$fields = array();
 
+
+ 		$fields[] = array(
+        	'id'       => 'field_instructions',
+            'type'     => 'custom',
+            'add_text' => __( 'Field Instructions', 'ultimatemember' ),
+            'label'    => 'Field Instructions',
+            'description'=> $desc,
+        );
+
 		$fields[] = array(
 			'id'       => 'field_relationships',
 			'type'     => 'multi_text',
 			'default'  => array(),
 			'add_text' => __( 'Add New Relationship', 'ultimatemember' ),
-			'title'    => 'Field Relationships',
-			'desc'     => $desc,
-		);
-
-		$sections[] = array(
-
-			'icon'       => 'um-faicon-exchange',
-			'title'      => __( 'Field Relationships', 'pp-fields' ),
-			'fields'     => $fields,
-			'subsection' => false,
+			'label'    => 'Field Relationships',
+			
+//			'description' 	=> $desc,
+//			'without_label' => true,
 
 		);
 
-		return $sections;
+		$settings["relational_fields"] = array( 
+			"title" => "Relational Fields", 
+			"sections" => array(
+				'' => array(
+					'title' => 'Relational Fields',
+					'fields' => $fields,
+				)		
+			) 
+		);
+
+		return $settings;
 	}
 
 	function init() {
